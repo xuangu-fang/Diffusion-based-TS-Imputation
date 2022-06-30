@@ -1,21 +1,31 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from diff_models import diff_CSDI
 
 
-class CSDI_base(nn.Module):
+# CSDI core idea self-implenmentation for simu data 
+# ignore side info embedding and complex NN structure
+
+
+class CSDI_simu(nn.Module):
     def __init__(self, target_dim, config, device):
         super().__init__()
         self.device = device
-        self.target_dim = target_dim
+        self.target_dim = target_dim # 8 for current simu data
 
-        self.emb_time_dim = config["model"]["timeemb"]
-        self.emb_feature_dim = config["model"]["featureemb"]
-        self.is_unconditional = config["model"]["is_unconditional"]
-        self.target_strategy = config["model"]["target_strategy"]
+        # self.emb_time_dim = config["model"]["timeemb"]
+        # self.emb_feature_dim = config["model"]["featureemb"]
+        # self.is_unconditional = config["model"]["is_unconditional"]
+        # self.target_strategy = config["model"]["target_strategy"]
+
+        self.emb_time_dim = 5
+        self.emb_feature_dim = 0 # to confirm
+        self.is_unconditional = 0
+        self.target_strategy = "random"
+
 
         self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim
+
         if self.is_unconditional == False:
             self.emb_total_dim += 1  # for conditional mask
         self.embed_layer = nn.Embedding(
@@ -62,21 +72,6 @@ class CSDI_base(nn.Module):
             num_masked = round(num_observed * sample_ratio)
             rand_for_mask[i][rand_for_mask[i].topk(num_masked).indices] = -1
         cond_mask = (rand_for_mask > 0).reshape(observed_mask.shape).float()
-        return cond_mask
-
-    def get_hist_mask(self, observed_mask, for_pattern_mask=None):
-        if for_pattern_mask is None:
-            for_pattern_mask = observed_mask
-        if self.target_strategy == "mix":
-            rand_mask = self.get_randmask(observed_mask)
-
-        cond_mask = observed_mask.clone()
-        for i in range(len(cond_mask)):
-            mask_choice = np.random.rand()
-            if self.target_strategy == "mix" and mask_choice > 0.5:
-                cond_mask[i] = rand_mask[i]
-            else:  # draw another sample for histmask (i-1 corresponds to another sample)
-                cond_mask[i] = cond_mask[i] * for_pattern_mask[i - 1] 
         return cond_mask
 
     def get_side_info(self, observed_tp, cond_mask):
@@ -229,64 +224,7 @@ class CSDI_base(nn.Module):
         return samples, observed_data, target_mask, observed_mask, observed_tp
 
 
-class CSDI_PM25(CSDI_base):
-    def __init__(self, config, device, target_dim=36):
-        super(CSDI_PM25, self).__init__(target_dim, config, device)
-
-    def process_data(self, batch):
-        observed_data = batch["observed_data"].to(self.device).float()
-        observed_mask = batch["observed_mask"].to(self.device).float()
-        observed_tp = batch["timepoints"].to(self.device).float()
-        gt_mask = batch["gt_mask"].to(self.device).float()
-        cut_length = batch["cut_length"].to(self.device).long()
-        for_pattern_mask = batch["hist_mask"].to(self.device).float()
-
-        observed_data = observed_data.permute(0, 2, 1)
-        observed_mask = observed_mask.permute(0, 2, 1)
-        gt_mask = gt_mask.permute(0, 2, 1)
-        for_pattern_mask = for_pattern_mask.permute(0, 2, 1)
-
-        return (
-            observed_data,
-            observed_mask,
-            observed_tp,
-            gt_mask,
-            for_pattern_mask,
-            cut_length,
-        )
-
-
-class CSDI_Physio(CSDI_base):
-    def __init__(self, config, device, target_dim=35):
-        super(CSDI_Physio, self).__init__(target_dim, config, device)
-
-    def process_data(self, batch):
-        observed_data = batch["observed_data"].to(self.device).float()
-        observed_mask = batch["observed_mask"].to(self.device).float()
-        observed_tp = batch["timepoints"].to(self.device).float()
-        gt_mask = batch["gt_mask"].to(self.device).float()
-
-        observed_data = observed_data.permute(0, 2, 1)
-        observed_mask = observed_mask.permute(0, 2, 1)
-        gt_mask = gt_mask.permute(0, 2, 1)
-
-        cut_length = torch.zeros(len(observed_data)).long().to(self.device)
-        for_pattern_mask = observed_mask
-
-        return (
-            observed_data,
-            observed_mask,
-            observed_tp,
-            gt_mask,
-            for_pattern_mask,
-            cut_length,
-        )
-
-
-class CSDI_simu(CSDI_base):
-    def __init__(self, config, device, target_dim=8):
-        super(CSDI_Physio, self).__init__(target_dim, config, device)
-
+    # to be modified later to fit simu data class
     def process_data(self, batch):
         observed_data = batch["observed_data"].to(self.device).float()
         observed_mask = batch["observed_mask"].to(self.device).float()
