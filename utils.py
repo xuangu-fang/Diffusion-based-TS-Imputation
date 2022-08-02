@@ -116,6 +116,8 @@ def evaluate(model, test_loader, nsample=100, scaler=1, mean_scaler=0, foldernam
                 output = model.evaluate(test_batch, nsample)
 
                 samples, c_target, eval_points, observed_points, observed_time = output
+
+                
                 samples = samples.permute(0, 1, 3, 2)  # (B,nsample,L,K)
                 c_target = c_target.permute(0, 2, 1)  # (B,L,K)
                 eval_points = eval_points.permute(0, 2, 1)
@@ -138,6 +140,8 @@ def evaluate(model, test_loader, nsample=100, scaler=1, mean_scaler=0, foldernam
                 mse_total += mse_current.sum().item()
                 mae_total += mae_current.sum().item()
                 evalpoints_total += eval_points.sum().item()
+
+                print('mse_total',mse_total)
 
                 it.set_postfix(
                     ordered_dict={

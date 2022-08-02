@@ -134,7 +134,7 @@ class CSDI_base(nn.Module):
     def set_input_to_diffmodel(self, noisy_data, observed_data, cond_mask):
         if self.is_unconditional == True:
             total_input = noisy_data.unsqueeze(1)  # (B,1,K,L)
-        else:
+        else: 
             cond_obs = (cond_mask * observed_data).unsqueeze(1)
             noisy_target = ((1 - cond_mask) * noisy_data).unsqueeze(1)
             total_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
@@ -285,7 +285,7 @@ class CSDI_Physio(CSDI_base):
 
 class CSDI_simu(CSDI_base):
     def __init__(self, config, device, target_dim=8):
-        super(CSDI_Physio, self).__init__(target_dim, config, device)
+        super(CSDI_simu, self).__init__(target_dim, config, device)
 
     def process_data(self, batch):
         observed_data = batch["observed_data"].to(self.device).float()
